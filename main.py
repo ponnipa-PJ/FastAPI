@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from datetime import date, datetime
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -21,6 +22,10 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), index=True)
     birthDate = Column(Date)
+
+class UserCreate(BaseModel):
+    name: str
+    birthDate: date
     
 app = FastAPI()
 
@@ -37,8 +42,8 @@ def get_db():
         db.close()
 
 @app.post("/users/")
-def create_user(name: str, birthDate: date, db: Session = Depends(get_db)):
-    user = User(name=name, birthDate=birthDate)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    user = User(name=user.name, birthDate=user.birthDate)
     print(user)
     db.add(user)
     db.commit()
@@ -53,11 +58,11 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 @app.put("/users/{user_id}")
-def update_user(user_id: int, name: str, birthDate: date, db: Session = Depends(get_db)):
+def update_user(user_id: int, userdata: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if user:
-        user.name = name
-        user.birthDate = birthDate
+        user.name = userdata.name
+        user.birthDate = userdata.birthDate
         db.commit()
         db.refresh(user)
         return user
